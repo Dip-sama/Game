@@ -1,31 +1,47 @@
+/* Reset basic margins */
 body {
   margin: 0;
+  padding: 0;
+  background: url('bg.png') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Lato', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  justify-content: center;
 }
 
+/* Game canvas container */
+#game-container {
+  background-color: rgba(0, 0, 0, 0.7); /* Darker translucent background */
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+}
+
+/* Game canvas */
 .game-canvas {
   width: 100%;
-  height: 100vw;
+  height: auto;
   max-width: 500px;
-  max-height:500px;
-  margin-left: auto;
-  margin-right: auto;
+  max-height: 500px;
+  display: block;
+  margin: 0 auto;
+  background-color: #111; /* dark game area */
 }
 
+/* Arrow keys layout */
 .keys {
-  font-family: 'Lato', sans-serif;
   text-align: center;
   width: 100%;
   padding: 10px;
   box-sizing: border-box;
-  height: 200px;
-  margin: auto;
+  max-width: 500px;
 }
 
-.up {
-  position: relative;
-  top: -4px;
-}
-
+/* Chevron base */
 .chevron::before {
   border-style: solid;
   border-width: 8px 8px 0 0;
@@ -33,53 +49,36 @@ body {
   display: inline-block;
   height: 20px;
   width: 20px;
-  top: -10px;
   position: relative;
   transform: rotate(-45deg);
 }
 
-.chevron.down::before {
-  transform: rotate(135deg);
-  top: -22px;
-}
+/* Directional chevrons */
+.chevron.up::before    { transform: rotate(-45deg); top: -10px; }
+.chevron.down::before  { transform: rotate(135deg); top: -22px; }
+.chevron.left::before  { transform: rotate(225deg); top: -18px; left: 5px; }
+.chevron.right::before { transform: rotate(45deg); top: -18px; left: -5px; }
 
-.chevron.right::before {
-  transform: rotate(45deg);
-  top: -18px;
-  left: -5px;
-}
-
-.chevron.left::before {
-  transform: rotate(225deg);
-  top: -18px;
-  left: 5px;
-}
-
+/* Arrow button styles */
 .arr {
   cursor: pointer;
   width: 70px;
   height: 70px;
   text-align: center;
-  line-height: 100px;
-  background: gray;
+  line-height: 70px;
+  background: linear-gradient(#888, #555);
   color: white;
-  font-size: 50px;
-  border-right: 10px solid #ccc;
-  border-bottom: 10px solid #ccc;
-  border-left: 10px solid #ddd;
-  border-top: 10px solid #eee;
+  font-size: 24px;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
   display: inline-block;
-  margin: 5px;
-  transition: all .05s linear;
+  margin: 8px;
+  transition: all 0.1s ease;
   user-select: none;
 }
 
 .arr:active {
-  background: #555;
-}
-
-#game-container {
-  display: flex;
-  flex-direction: column;
-  background-color: rgba(220, 220, 220, 0.6);
+  background: #444;
+  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.4);
 }
