@@ -29,10 +29,10 @@ var Snake = (function () {
   var lastAction = ActionEnum.none;
 
   var snakeImg = new Image();
-  snakeImg.src = 'snake.png';
+  snakeImg.src = 'snake.png.jpg';
 
   var fruitImg = new Image();
-  fruitImg.src = 'fruit.png';
+  fruitImg.src = 'Fruit.png.jpg';
 
   var canv, ctx;
 
