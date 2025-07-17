@@ -1,294 +1,361 @@
-var Snake = (function () {
-
-  const INITIAL_TAIL = 4;
-  var fixedTail = true;
-
-  var intervalID;
-
-  var tileCount = 10;
-  var gridSize = 400 / tileCount;
-
-  const INITIAL_PLAYER = { x: Math.floor(tileCount / 2), y: Math.floor(tileCount / 2) };
-
-  var velocity = { x: 0, y: 0 };
-  var player = { x: INITIAL_PLAYER.x, y: INITIAL_PLAYER.y };
-
-  var walls = false;
-
-  var fruit = { x: 1, y: 1 };
-
-  var trail = [];
-  var tail = INITIAL_TAIL;
-
-  var reward = 0;
-  var points = 0;
-  var pointsMax = 0;
-
-  var ActionEnum = { 'none': 0, 'up': 1, 'down': 2, 'left': 3, 'right': 4 };
-  Object.freeze(ActionEnum);
-  var lastAction = ActionEnum.none;
-
-  var snakeImg = new Image();
-  snakeImg.src = 'snake.png.jpg';
-
-  var fruitImg = new Image();
-  fruitImg.src = 'Fruit.png.jpg';
-
-  var canv, ctx;
-
-  function setup() {
-    canv = document.getElementById('gc');
-    ctx = canv.getContext('2d');
-    game.reset();
+class SnakeGame {
+  constructor() {
+    // Game constants
+    this.INITIAL_TAIL = 4;
+    this.TILE_COUNT = 10;
+    this.GRID_SIZE = 400 / this.TILE_COUNT;
+    this.INITIAL_PLAYER = { 
+      x: Math.floor(this.TILE_COUNT / 2), 
+      y: Math.floor(this.TILE_COUNT / 2) 
+    };
+    
+    // Game state
+    this.fixedTail = true;
+    this.intervalID = null;
+    this.velocity = { x: 0, y: 0 };
+    this.player = { x: this.INITIAL_PLAYER.x, y: this.INITIAL_PLAYER.y };
+    this.walls = false;
+    this.fruit = { x: 1, y: 1 };
+    this.trail = [];
+    this.tail = this.INITIAL_TAIL;
+    this.reward = 0;
+    this.points = 0;
+    this.pointsMax = 0;
+    
+    // Action tracking
+    this.ActionEnum = Object.freeze({
+      'none': 0,
+      'up': 1,
+      'down': 2,
+      'left': 3,
+      'right': 4
+    });
+    this.lastAction = this.ActionEnum.none;
+    
+    // Images
+    this.snakeImg = new Image();
+    this.snakeImg.src = 'snake.png.jpg';
+    this.fruitImg = new Image();
+    this.fruitImg.src = 'Fruit.png.jpg';
+    
+    // Canvas
+    this.canv = null;
+    this.ctx = null;
+    
+    // Bind methods
+    this.keyPush = this.keyPush.bind(this);
   }
-
-  var game = {
-
-    reset: function () {
-      ctx.fillStyle = 'grey';
-      ctx.fillRect(0, 0, canv.width, canv.height);
-
-      tail = INITIAL_TAIL;
-      points = 0;
-      velocity.x = 0;
-      velocity.y = 0;
-      player.x = INITIAL_PLAYER.x;
-      player.y = INITIAL_PLAYER.y;
-      reward = -1;
-
-      lastAction = ActionEnum.none;
-
-      trail = [];
-      trail.push({ x: player.x, y: player.y });
-    },
-
-    action: {
-      up: function () {
-        if (lastAction != ActionEnum.down) {
-          velocity.x = 0;
-          velocity.y = -1;
-        }
-      },
-      down: function () {
-        if (lastAction != ActionEnum.up) {
-          velocity.x = 0;
-          velocity.y = 1;
-        }
-      },
-      left: function () {
-        if (lastAction != ActionEnum.right) {
-          velocity.x = -1;
-          velocity.y = 0;
-        }
-      },
-      right: function () {
-        if (lastAction != ActionEnum.left) {
-          velocity.x = 1;
-          velocity.y = 0;
-        }
+  
+  setup() {
+    this.canv = document.getElementById('gc');
+    this.ctx = this.canv.getContext('2d');
+    this.reset();
+  }
+  
+  reset() {
+    this.ctx.fillStyle = 'grey';
+    this.ctx.fillRect(0, 0, this.canv.width, this.canv.height);
+    
+    this.tail = this.INITIAL_TAIL;
+    this.points = 0;
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    this.player.x = this.INITIAL_PLAYER.x;
+    this.player.y = this.INITIAL_PLAYER.y;
+    this.reward = -1;
+    this.lastAction = this.ActionEnum.none;
+    
+    this.trail = [];
+    this.trail.push({ x: this.player.x, y: this.player.y });
+  }
+  
+  moveUp() {
+    if (this.lastAction !== this.ActionEnum.down) {
+      this.velocity.x = 0;
+      this.velocity.y = -1;
+    }
+  }
+  
+  moveDown() {
+    if (this.lastAction !== this.ActionEnum.up) {
+      this.velocity.x = 0;
+      this.velocity.y = 1;
+    }
+  }
+  
+  moveLeft() {
+    if (this.lastAction !== this.ActionEnum.right) {
+      this.velocity.x = -1;
+      this.velocity.y = 0;
+    }
+  }
+  
+  moveRight() {
+    if (this.lastAction !== this.ActionEnum.left) {
+      this.velocity.x = 1;
+      this.velocity.y = 0;
+    }
+  }
+  
+  randomFruit() {
+    if (this.walls) {
+      this.fruit.x = 1 + Math.floor(Math.random() * (this.TILE_COUNT - 2));
+      this.fruit.y = 1 + Math.floor(Math.random() * (this.TILE_COUNT - 2));
+    } else {
+      this.fruit.x = Math.floor(Math.random() * this.TILE_COUNT);
+      this.fruit.y = Math.floor(Math.random() * this.TILE_COUNT);
+    }
+  }
+  
+  handleWallCollision() {
+    if (this.walls) {
+      // Hit wall - reset game
+      if (this.player.x < 1 || this.player.x > this.TILE_COUNT - 2 || 
+          this.player.y < 1 || this.player.y > this.TILE_COUNT - 2) {
+        this.reset();
       }
-    },
-
-    RandomFruit: function () {
-      if (walls) {
-        fruit.x = 1 + Math.floor(Math.random() * (tileCount - 2));
-        fruit.y = 1 + Math.floor(Math.random() * (tileCount - 2));
-      } else {
-        fruit.x = Math.floor(Math.random() * tileCount);
-        fruit.y = Math.floor(Math.random() * tileCount);
-      }
-    },
-
-    loop: function () {
-      reward = -0.1;
-
-      function DontHitWall() {
-        if (player.x < 0) player.x = tileCount - 1;
-        if (player.x >= tileCount) player.x = 0;
-        if (player.y < 0) player.y = tileCount - 1;
-        if (player.y >= tileCount) player.y = 0;
-      }
-
-      function HitWall() {
-        if (player.x < 1 || player.x > tileCount - 2 || player.y < 1 || player.y > tileCount - 2) {
-          game.reset();
-        }
-
-        ctx.fillStyle = 'grey';
-        ctx.fillRect(0, 0, gridSize - 1, canv.height);
-        ctx.fillRect(0, 0, canv.width, gridSize - 1);
-        ctx.fillRect(canv.width - gridSize + 1, 0, gridSize, canv.height);
-        ctx.fillRect(0, canv.height - gridSize + 1, canv.width, gridSize);
-      }
-
-      var stopped = velocity.x == 0 && velocity.y == 0;
-
-      player.x += velocity.x;
-      player.y += velocity.y;
-
-      if (velocity.x == 0 && velocity.y == -1) lastAction = ActionEnum.up;
-      if (velocity.x == 0 && velocity.y == 1) lastAction = ActionEnum.down;
-      if (velocity.x == -1 && velocity.y == 0) lastAction = ActionEnum.left;
-      if (velocity.x == 1 && velocity.y == 0) lastAction = ActionEnum.right;
-
-      ctx.fillStyle = 'rgba(40,40,40,0.8)';
-      ctx.fillRect(0, 0, canv.width, canv.height);
-
-      if (walls) HitWall();
-      else DontHitWall();
-
-      if (!stopped) {
-        trail.push({ x: player.x, y: player.y });
-        while (trail.length > tail) trail.shift();
-      }
-
-      if (!stopped) {
-        ctx.fillStyle = 'rgba(200,200,200,0.2)';
-        ctx.font = "small-caps 14px Helvetica";
-        ctx.fillText("(esc) reset", 24, 356);
-        ctx.fillText("(space) pause", 24, 374);
-      }
-
-      // Draw snake from image
-      for (var i = 0; i < trail.length; i++) {
-        ctx.drawImage(
-          snakeImg,
-          trail[i].x * gridSize + 1,
-          trail[i].y * gridSize + 1,
-          gridSize - 2,
-          gridSize - 2
-        );
-        if (!stopped && trail[i].x == player.x && trail[i].y == player.y) {
-          game.reset();
+      
+      // Draw walls
+      this.ctx.fillStyle = 'grey';
+      this.ctx.fillRect(0, 0, this.GRID_SIZE - 1, this.canv.height);
+      this.ctx.fillRect(0, 0, this.canv.width, this.GRID_SIZE - 1);
+      this.ctx.fillRect(this.canv.width - this.GRID_SIZE + 1, 0, this.GRID_SIZE, this.canv.height);
+      this.ctx.fillRect(0, this.canv.height - this.GRID_SIZE + 1, this.canv.width, this.GRID_SIZE);
+    } else {
+      // Wrap around screen
+      if (this.player.x < 0) this.player.x = this.TILE_COUNT - 1;
+      if (this.player.x >= this.TILE_COUNT) this.player.x = 0;
+      if (this.player.y < 0) this.player.y = this.TILE_COUNT - 1;
+      if (this.player.y >= this.TILE_COUNT) this.player.y = 0;
+    }
+  }
+  
+  checkSelfCollision() {
+    const stopped = this.velocity.x === 0 && this.velocity.y === 0;
+    if (!stopped) {
+      for (let i = 0; i < this.trail.length; i++) {
+        if (this.trail[i].x === this.player.x && this.trail[i].y === this.player.y) {
+          this.reset();
+          return true;
         }
       }
-
-      // Eat fruit
-      if (player.x == fruit.x && player.y == fruit.y) {
-        if (!fixedTail) tail++;
-        points++;
-        if (points > pointsMax) pointsMax = points;
-        reward = 1;
-        game.RandomFruit();
-
-        while ((function () {
-          for (var i = 0; i < trail.length; i++) {
-            if (trail[i].x == fruit.x && trail[i].y == fruit.y) {
-              game.RandomFruit();
-              return true;
-            }
-          }
-          return false;
-        })());
+    }
+    return false;
+  }
+  
+  checkFruitCollision() {
+    if (this.player.x === this.fruit.x && this.player.y === this.fruit.y) {
+      if (!this.fixedTail) this.tail++;
+      this.points++;
+      if (this.points > this.pointsMax) this.pointsMax = this.points;
+      this.reward = 1;
+      this.randomFruit();
+      
+      // Make sure fruit doesn't spawn on snake
+      while (this.trail.some(segment => segment.x === this.fruit.x && segment.y === this.fruit.y)) {
+        this.randomFruit();
       }
-
-      // Draw fruit from image
-      ctx.drawImage(
-        fruitImg,
-        fruit.x * gridSize + 1,
-        fruit.y * gridSize + 1,
-        gridSize - 2,
-        gridSize - 2
+    }
+  }
+  
+  updateLastAction() {
+    if (this.velocity.x === 0 && this.velocity.y === -1) this.lastAction = this.ActionEnum.up;
+    if (this.velocity.x === 0 && this.velocity.y === 1) this.lastAction = this.ActionEnum.down;
+    if (this.velocity.x === -1 && this.velocity.y === 0) this.lastAction = this.ActionEnum.left;
+    if (this.velocity.x === 1 && this.velocity.y === 0) this.lastAction = this.ActionEnum.right;
+  }
+  
+  drawSnake() {
+    for (let i = 0; i < this.trail.length; i++) {
+      this.ctx.drawImage(
+        this.snakeImg,
+        this.trail[i].x * this.GRID_SIZE + 1,
+        this.trail[i].y * this.GRID_SIZE + 1,
+        this.GRID_SIZE - 2,
+        this.GRID_SIZE - 2
       );
-
-      if (stopped) {
-        ctx.fillStyle = 'rgba(250,250,250,0.8)';
-        ctx.font = "small-caps bold 14px Helvetica";
-        ctx.fillText("press ARROW KEYS to START...", 24, 374);
-      }
-
-      ctx.fillStyle = 'white';
-      ctx.font = "bold small-caps 16px Helvetica";
-      ctx.fillText("points: " + points, 288, 40);
-      ctx.fillText("top: " + pointsMax, 292, 60);
-
-      return reward;
-    }
-  };
-
-  function keyPush(evt) {
-    switch (evt.keyCode) {
-      case 37: game.action.left(); evt.preventDefault(); break;
-      case 38: game.action.up(); evt.preventDefault(); break;
-      case 39: game.action.right(); evt.preventDefault(); break;
-      case 40: game.action.down(); evt.preventDefault(); break;
-      case 32: Snake.pause(); evt.preventDefault(); break;
-      case 27: game.reset(); evt.preventDefault(); break;
     }
   }
-
-  return {
-    start: function (fps = 8) {
-      window.onload = function () {
-        snakeImg.onload = function () {
-          fruitImg.onload = function () {
-            setup();
-            intervalID = setInterval(game.loop, 1000 / fps);
-          };
-        };
-      };
-    },
-
-    loop: game.loop,
-    reset: game.reset,
-
-    stop: function () {
-      clearInterval(intervalID);
-    },
-
-    setup: {
-      keyboard: function (state) {
-        if (state) {
-          document.addEventListener('keydown', keyPush);
-        } else {
-          document.removeEventListener('keydown', keyPush);
-        }
-      },
-      wall: function (state) {
-        walls = state;
-      },
-      tileCount: function (size) {
-        tileCount = size;
-        gridSize = 400 / tileCount;
-      },
-      fixedTail: function (state) {
-        fixedTail = state;
-      }
-    },
-
-    action: function (act) {
-      switch (act) {
-        case 'left': game.action.left(); break;
-        case 'up': game.action.up(); break;
-        case 'right': game.action.right(); break;
-        case 'down': game.action.down(); break;
-      }
-    },
-
-    pause: function () {
-      velocity.x = 0;
-      velocity.y = 0;
-    },
-
-    clearTopScore: function () {
-      pointsMax = 0;
-    },
-
-    data: {
-      player: player,
-      fruit: fruit,
-      trail: function () {
-        return trail;
-      }
-    },
-
-    info: {
-      tileCount: tileCount
+  
+  drawFruit() {
+    this.ctx.drawImage(
+      this.fruitImg,
+      this.fruit.x * this.GRID_SIZE + 1,
+      this.fruit.y * this.GRID_SIZE + 1,
+      this.GRID_SIZE - 2,
+      this.GRID_SIZE - 2
+    );
+  }
+  
+  drawUI() {
+    const stopped = this.velocity.x === 0 && this.velocity.y === 0;
+    
+    if (!stopped) {
+      this.ctx.fillStyle = 'rgba(200,200,200,0.2)';
+      this.ctx.font = "small-caps 14px Helvetica";
+      this.ctx.fillText("(esc) reset", 24, 356);
+      this.ctx.fillText("(space) pause", 24, 374);
     }
-  };
+    
+    if (stopped) {
+      this.ctx.fillStyle = 'rgba(250,250,250,0.8)';
+      this.ctx.font = "small-caps bold 14px Helvetica";
+      this.ctx.fillText("press ARROW KEYS to START...", 24, 374);
+    }
+    
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = "bold small-caps 16px Helvetica";
+    this.ctx.fillText("points: " + this.points, 288, 40);
+    this.ctx.fillText("top: " + this.pointsMax, 292, 60);
+  }
+  
+  gameLoop() {
+    this.reward = -0.1;
+    
+    const stopped = this.velocity.x === 0 && this.velocity.y === 0;
+    
+    // Update player position
+    this.player.x += this.velocity.x;
+    this.player.y += this.velocity.y;
+    
+    // Update last action
+    this.updateLastAction();
+    
+    // Clear canvas
+    this.ctx.fillStyle = 'rgba(40,40,40,0.8)';
+    this.ctx.fillRect(0, 0, this.canv.width, this.canv.height);
+    
+    // Handle walls
+    this.handleWallCollision();
+    
+    // Update trail
+    if (!stopped) {
+      this.trail.push({ x: this.player.x, y: this.player.y });
+      while (this.trail.length > this.tail) {
+        this.trail.shift();
+      }
+    }
+    
+    // Draw UI
+    this.drawUI();
+    
+    // Draw snake and check self collision
+    this.drawSnake();
+    this.checkSelfCollision();
+    
+    // Check fruit collision
+    this.checkFruitCollision();
+    
+    // Draw fruit
+    this.drawFruit();
+    
+    return this.reward;
+  }
+  
+  keyPush(evt) {
+    switch (evt.keyCode) {
+      case 37: this.moveLeft(); evt.preventDefault(); break;
+      case 38: this.moveUp(); evt.preventDefault(); break;
+      case 39: this.moveRight(); evt.preventDefault(); break;
+      case 40: this.moveDown(); evt.preventDefault(); break;
+      case 32: this.pause(); evt.preventDefault(); break;
+      case 27: this.reset(); evt.preventDefault(); break;
+    }
+  }
+  
+  start(fps = 8) {
+    const startGame = () => {
+      this.setup();
+      this.intervalID = setInterval(() => this.gameLoop(), 1000 / fps);
+    };
+    
+    // Wait for images to load
+    let imagesLoaded = 0;
+    const checkImagesLoaded = () => {
+      imagesLoaded++;
+      if (imagesLoaded === 2) {
+        startGame();
+      }
+    };
+    
+    this.snakeImg.onload = checkImagesLoaded;
+    this.fruitImg.onload = checkImagesLoaded;
+    
+    // If images are already loaded
+    if (this.snakeImg.complete) checkImagesLoaded();
+    if (this.fruitImg.complete) checkImagesLoaded();
+  }
+  
+  stop() {
+    if (this.intervalID) {
+      clearInterval(this.intervalID);
+      this.intervalID = null;
+    }
+  }
+  
+  pause() {
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+  }
+  
+  action(act) {
+    switch (act) {
+      case 'left': this.moveLeft(); break;
+      case 'up': this.moveUp(); break;
+      case 'right': this.moveRight(); break;
+      case 'down': this.moveDown(); break;
+    }
+  }
+  
+  setupKeyboard(state) {
+    if (state) {
+      document.addEventListener('keydown', this.keyPush);
+    } else {
+      document.removeEventListener('keydown', this.keyPush);
+    }
+  }
+  
+  setWalls(state) {
+    this.walls = state;
+  }
+  
+  setTileCount(size) {
+    this.TILE_COUNT = size;
+    this.GRID_SIZE = 400 / this.TILE_COUNT;
+  }
+  
+  setFixedTail(state) {
+    this.fixedTail = state;
+  }
+  
+  clearTopScore() {
+    this.pointsMax = 0;
+  }
+  
+  // Getters for game data
+  getPlayer() {
+    return this.player;
+  }
+  
+  getFruit() {
+    return this.fruit;
+  }
+  
+  getTrail() {
+    return [...this.trail]; // Return copy to prevent external modification
+  }
+  
+  getTileCount() {
+    return this.TILE_COUNT;
+  }
+}
 
-})();
+// Usage example:
+const snake = new SnakeGame();
 
-Snake.start(8);
-Snake.setup.keyboard(true);
-Snake.setup.fixedTail(false);
+// Wait for page to load
+window.addEventListener('DOMContentLoaded', () => {
+  snake.start(8);
+  snake.setupKeyboard(true);
+  snake.setFixedTail(false);
+});
